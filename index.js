@@ -4,10 +4,19 @@ const app = express();
 const port = process.env.PORT || 8000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
+const cloudinary = require('cloudinary').v2;
 
 // Middlewares
 app.use(cors());
-app.use(express.json());
+app.use(express.json({limit: '50mb'}));
+
+// Cloudinary API config
+cloudinary.config({ 
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
 
 // If MongoDB Atlast use this server URL (Cluster)
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@practice-cluster.kfbhlaq.mongodb.net/?retryWrites=true&w=majority`;
@@ -53,6 +62,33 @@ const Services = main.collection('services');
 
 /// API ENDPOINTS
 
+// New service adding
+app.post('/add-service', async (req, res) => {
+  const {name, image} = req.body;
+  try {
+    const uploadedImage = await cloudinary.uploader.upload(image, {folder: 'dev/legaltix/services'});
+    const service = {name, image: {public_id: uploadedImage.public_id, url: uploadedImage.secure_url}};
+    const result = await Services.insertOne(service);
+    if (result.insertedId) {
+      res.send({
+        success: true,
+        message: `Successfully added the ${req.body.name} with id ${result.insertedId}`,
+      });
+    } else {
+      res.send({
+        success: false,
+        error: "Couldn't create the service",
+      });
+    };
+  } catch (error) {
+    console.log(error.name, error);
+    res.send({
+      success: false,
+      error: error.message,
+    });
+  };
+});
+
 // Verify the server is running or not
 app.get('/', (req, res) => {
   try {
@@ -66,7 +102,7 @@ app.get('/', (req, res) => {
       success: false,
       error: error.message,
     });
-  }
+  };
 });
 
 // Listening the app on a particular port
