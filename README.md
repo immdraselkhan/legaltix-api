@@ -14,6 +14,9 @@ I used the following things in this server.
 ### `MongoDB Atlas`
 [Documentation Link](https://www.mongodb.com/docs)
 
+### `Cloudinary API`
+[Documentation Link](https://cloudinary.com/documentation/node_integration)
+
 ### `jsonwebtoken`
 [Github Link](https://github.com/auth0/node-jsonwebtoken)
 
