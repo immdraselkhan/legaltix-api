@@ -64,15 +64,23 @@ const Services = main.collection('services');
 
 // New service adding
 app.post('/add-service', async (req, res) => {
-  const {name, image} = req.body;
+
+  const {title, slug, thumbnail, description, price, userName, userId, userPhoto} = req.body;
+
   try {
-    const uploadedImage = await cloudinary.uploader.upload(image, {folder: 'dev/legaltix/services'});
-    const service = {name, image: {public_id: uploadedImage.public_id, url: uploadedImage.secure_url}};
+    const uploadedThumbnail = await cloudinary.uploader.upload(thumbnail, {folder: 'dev/legaltix/services'});
+
+    const uploadedUserPhoto = userPhoto.startsWith('data:') ? await cloudinary.uploader.upload(userPhoto, {folder: 'dev/legaltix/services'}) : {public_id: userPhoto.substring(8), secure_url: userPhoto};
+
+    const service = {title, slug, thumbnail: {public_id: uploadedThumbnail.public_id, url: uploadedThumbnail.secure_url}, description, price, userName, userId, userPhoto: {public_id: uploadedUserPhoto.public_id, url: uploadedUserPhoto.secure_url}};
+
     const result = await Services.insertOne(service);
+
     if (result.insertedId) {
       res.send({
         success: true,
-        message: `Successfully added the ${req.body.name} with id ${result.insertedId}`,
+        message: `Successfully added the ${req.body.title} with id ${result.insertedId}`,
+        updatedPhoto: uploadedUserPhoto.secure_url,
       });
     } else {
       res.send({
