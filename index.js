@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 8000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -17,6 +18,36 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true
 });
+
+// JWT verify
+const verifyJWT = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token && token !== 'null') {
+      jwt.verify(token, process.env.ACCESS_API_TOKEN, (error, decoded) => {
+        if (error) {
+          res.status(401).send({
+            success: false,
+            error: 'Unauthorized access, token invalid!',
+          });
+          return;
+        } else {
+          req.decoded = decoded;
+          next();
+        };
+      });
+    } else {
+      res.status(401).send({
+        success: false,
+        error: 'Unauthorized access, token not found!',
+      });
+      return;
+    };
+  } catch (error) {
+    // Error handling
+    console.log(error);
+  };
+};
 
 // If MongoDB Atlast use this server URL (Cluster)
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@practice-cluster.kfbhlaq.mongodb.net/?retryWrites=true&w=majority`;
@@ -136,9 +167,42 @@ app.post('/add-review/:slug', async (req, res) => {
   };
 });
 
-// All services
-app.get('/my-reviews/:userId', async (req, res) => {
+// JWT
+app.post('/jwt', async (req, res) => {
   try {
+    const user = req.body;
+    const token = jwt.sign(user, process.env.ACCESS_API_TOKEN, {expiresIn : '1d'});
+    if (user.userId) {
+      res.send({
+        success: true,
+        token,
+      });
+    } else {
+      res.send({
+        success: false,
+        error: 'Couldn\'t generate the token',
+      });
+    };
+  } catch (error) {
+    console.log(error.name, error.message);
+    res.send({
+      success: false,
+      error: error.message,
+    });
+  };
+});
+
+// All services
+app.get('/my-reviews/:userId', verifyJWT, async (req, res) => {
+  try {
+    const decoded = req.decoded;
+    if (decoded.userId !== req.params.userId) {
+      res.status(401).send({
+        success: false,
+        error: 'Unauthorized access, different user!',
+      });
+      return;
+    };
     const cursor = Reviews.find({userId: req.params.userId}).sort({'_id': -1});
     const reviews = await cursor.toArray();
     res.send({
