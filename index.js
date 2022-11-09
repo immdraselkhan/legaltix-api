@@ -68,14 +68,14 @@ const Reviews = main.collection('reviews');
 // Add service
 app.post('/add-service', async (req, res) => {
 
-  const {title, slug, thumbnail, description, price, userName, userId, userPhoto} = req.body;
+  const {title, slug, thumbnail, description, price, userName, userId, userPhoto, date} = req.body;
 
   try {
     const uploadedThumbnail = await cloudinary.uploader.upload(thumbnail, {folder: 'dev/legaltix/services'});
 
     const uploadedUserPhoto = userPhoto.startsWith('data:') ? await cloudinary.uploader.upload(userPhoto, {folder: 'dev/legaltix/services'}) : {public_id: userPhoto.substring(8), secure_url: userPhoto};
 
-    const service = {title, slug, thumbnail: {public_id: uploadedThumbnail.public_id, url: uploadedThumbnail.secure_url}, description, price, userName, userId, userPhoto: {public_id: uploadedUserPhoto.public_id, url: uploadedUserPhoto.secure_url}};
+    const service = {title, slug, thumbnail: {public_id: uploadedThumbnail.public_id, url: uploadedThumbnail.secure_url}, description, price, userName, userId, userPhoto: {public_id: uploadedUserPhoto.public_id, url: uploadedUserPhoto.secure_url}, date};
 
     const result = await Services.insertOne(service);
 
@@ -116,9 +116,7 @@ app.post('/add-review/:slug', async (req, res) => {
 
     const ratingResult = await Services.updateOne({_id: review.serviceId}, { $set: service });
 
-    console.log(ratingResult);
-
-    if (result.insertedId) {
+    if (result.insertedId && ratingResult.modifiedCount) {
       res.send({
         success: true,
         message: 'Successfully added',
@@ -139,6 +137,24 @@ app.post('/add-review/:slug', async (req, res) => {
 });
 
 // All services
+app.get('/my-reviews/:userId', async (req, res) => {
+  try {
+    const cursor = Reviews.find({userId: req.params.userId}).sort({'_id': -1});
+    const reviews = await cursor.toArray();
+    res.send({
+      success: true,
+      data: reviews,
+    });
+  } catch (error) {
+    console.log(error.name, error.message);
+    res.send({
+      success: false,
+      error: error.message,
+    });
+  };
+});
+
+// All reviews
 app.get('/services', async (req, res) => {
   try {
     const cursor = Services.find({}).sort({'_id': -1});
