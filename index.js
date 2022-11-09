@@ -105,10 +105,19 @@ app.post('/add-review/:slug', async (req, res) => {
   try {
     const review = req.body;
     const result = await Reviews.insertOne(review);
-    // const service = await Services.findOne({ _id: ObjectId(review.serviceId)});
-    // service['rating'] = review.star;
-    // service['reviewedBy'] = 1;
-    // console.log(service);
+    const service = await Services.findOne({_id: review.serviceId});
+    if (!service.rating) {
+      service['starCount'] = 0;
+      service['reviewCount'] = 0;
+    };
+    service['starCount'] = service.starCount + review.star;
+    service['reviewCount'] = service.reviewCount + 1;
+    service['rating'] = service.starCount / service.reviewCount;
+
+    const ratingResult = await Services.updateOne({_id: review.serviceId}, { $set: service });
+
+    console.log(ratingResult);
+
     if (result.insertedId) {
       res.send({
         success: true,
@@ -151,11 +160,8 @@ app.get('/services', async (req, res) => {
 app.get('/service/:slug', async (req, res) => {
   try {
     const service = await Services.findOne({ slug: req.params.slug});
-
     const cursor = Reviews.find({serviceId: service._id}).sort({'_id': -1});
-
     const reviews = await cursor.toArray();
-    
     res.send({
       success: true,
       data: {service, reviews},
