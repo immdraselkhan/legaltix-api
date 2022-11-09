@@ -60,9 +60,12 @@ const main = client.db('legaltix');
 // All services collection
 const Services = main.collection('services');
 
+// All reviewes collection
+const Reviews = main.collection('reviews');
+
 /// API ENDPOINTS
 
-// New service adding
+// Add service
 app.post('/add-service', async (req, res) => {
 
   const {title, slug, thumbnail, description, price, userName, userId, userPhoto} = req.body;
@@ -79,17 +82,86 @@ app.post('/add-service', async (req, res) => {
     if (result.insertedId) {
       res.send({
         success: true,
-        message: `Successfully added the ${req.body.title} with id ${result.insertedId}`,
+        message: `Successfully added the ${req.body.title}`,
         updatedPhoto: uploadedUserPhoto.secure_url,
       });
     } else {
       res.send({
         success: false,
-        error: "Couldn't create the service",
+        error: 'Couldn\'t create the service',
       });
     };
   } catch (error) {
     console.log(error.name, error);
+    res.send({
+      success: false,
+      error: error.message,
+    });
+  };
+});
+
+// Add review
+app.post('/add-review/:slug', async (req, res) => {
+  try {
+    const review = req.body;
+    const result = await Reviews.insertOne(review);
+    // const service = await Services.findOne({ _id: ObjectId(review.serviceId)});
+    // service['rating'] = review.star;
+    // service['reviewedBy'] = 1;
+    // console.log(service);
+    if (result.insertedId) {
+      res.send({
+        success: true,
+        message: 'Successfully added',
+      });
+    } else {
+      res.send({
+        success: false,
+        error: 'Couldn\'t add the review',
+      });
+    };
+  } catch (error) {
+    console.log(error.name, error);
+    res.send({
+      success: false,
+      error: error.message,
+    });
+  };
+});
+
+// All services
+app.get('/services', async (req, res) => {
+  try {
+    const cursor = Services.find({}).sort({'_id': -1});
+    const services = await cursor.limit(parseInt(req.query.total)).toArray();
+    res.send({
+      success: true,
+      data: services,
+    });
+  } catch (error) {
+    console.log(error.name, error.message);
+    res.send({
+      success: false,
+      error: error.message,
+    });
+  };
+});
+
+// Single service and reviews
+app.get('/service/:slug', async (req, res) => {
+  try {
+    const service = await Services.findOne({ slug: req.params.slug});
+
+    const cursor = Reviews.find({serviceId: service._id}).sort({'_id': -1});
+
+    const reviews = await cursor.toArray();
+    
+    res.send({
+      success: true,
+      data: {service, reviews},
+    });
+  } catch (error) {
+    console.log(error.name, error.message);
     res.send({
       success: false,
       error: error.message,
