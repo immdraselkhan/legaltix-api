@@ -145,7 +145,7 @@ app.post('/add-review/:slug', async (req, res) => {
     service['reviewCount'] = service.reviewCount + 1;
     service['rating'] = service.starCount / service.reviewCount;
 
-    const ratingResult = await Services.updateOne({_id: review.serviceId}, { $set: service });
+    const ratingResult = await Services.updateOne({_id: review.serviceId}, {$set: service});
 
     if (result.insertedId && ratingResult.modifiedCount) {
       res.send({
@@ -248,6 +248,70 @@ app.get('/service/:slug', async (req, res) => {
     });
   } catch (error) {
     console.log(error.name, error.message);
+    res.send({
+      success: false,
+      error: error.message,
+    });
+  };
+});
+
+// Edit review
+app.patch('/my-reviews/edit/:id', async (req, res) => {
+  const {comment, oldStar, star} = req.body;
+  try {
+    const service = await Services.findOne({_id: req.params.id});
+    service['starCount'] = (service.starCount - oldStar) + star;
+    service['rating'] = service.starCount / service.reviewCount;
+    const serviceResult = await Services.updateOne({_id: req.params.id}, { $set: service});
+    const reviewResult = await Reviews.updateOne({serviceId: req.params.id}, {$set: {comment, star}});
+    if (serviceResult.modifiedCount || reviewResult.modifiedCount) {
+      res.send({
+        success: true,
+        message: 'Successfully updated',
+      });
+    } else {
+      res.send({
+        success: false,
+        error: "Couldn't update the review",
+      });
+    };
+  } catch (error) {
+    res.send({
+      success: false,
+      error: error.message,
+    });
+  };
+});
+
+// Delete review
+app.delete('/my-reviews/delete/:id', async (req, res) => {
+  try {
+    const review = await Reviews.findOne({serviceId: req.params.id});
+    if (!review?.serviceId) {
+      res.send({
+        success: false,
+        error: 'Review doesn\'t exist',
+      });
+      return;
+    };
+    const service = await Services.findOne({_id: req.params.id});
+    service['starCount'] = (service.starCount - req.body.oldStar);
+    service['reviewCount'] = service.reviewCount - 1;
+    service['rating'] = service.starCount === 0 ? 0 : service.starCount / service.reviewCount;
+    const serviceResult = await Services.updateOne({_id: req.params.id}, { $set: service});
+    const reviewResult = await Reviews.deleteOne({serviceId: req.params.id});
+    if (serviceResult.modifiedCount && reviewResult.deletedCount) {
+      res.send({
+        success: true,
+        message: 'Successfully deleted',
+      });
+    } else {
+      res.send({
+        success: false,
+        error: 'Couldn\'t delete the review',
+      });
+    };
+  } catch (error) {
     res.send({
       success: false,
       error: error.message,
