@@ -269,7 +269,7 @@ app.patch('/my-reviews/edit/:id', async (req, res) => {
   try {
     const service = await Services.findOne({_id: req.params.id});
     service['starCount'] = (service.starCount - oldStar) + star;
-    service['rating'] = service.starCount / service.reviewCount;
+    service['rating'] = parseInt(service.starCount / service.reviewCount);
     const serviceResult = await Services.updateOne({_id: req.params.id}, { $set: service});
     const reviewResult = await Reviews.updateOne({serviceId: req.params.id}, {$set: {comment, star}});
     if (serviceResult.modifiedCount || reviewResult.modifiedCount) {
@@ -305,7 +305,7 @@ app.delete('/my-reviews/delete/:id', async (req, res) => {
     const service = await Services.findOne({_id: req.params.id});
     service['starCount'] = (service.starCount - req.body.oldStar);
     service['reviewCount'] = service.reviewCount - 1;
-    service['rating'] = service.starCount === 0 ? 0 : service.starCount / service.reviewCount;
+    service['rating'] = parseInt(service.starCount === 0 ? 0 : service.starCount / service.reviewCount);
     const serviceResult = await Services.updateOne({_id: req.params.id}, { $set: service});
     const reviewResult = await Reviews.deleteOne({serviceId: req.params.id});
     if (serviceResult.modifiedCount && reviewResult.deletedCount) {
