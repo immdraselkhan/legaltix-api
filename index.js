@@ -218,15 +218,23 @@ app.get('/my-reviews/:userId', verifyJWT, async (req, res) => {
   };
 });
 
-// All reviews
+// All services
 app.get('/services', async (req, res) => {
   try {
     const cursor = Services.find({}).sort({'_id': -1});
-    const services = await cursor.limit(parseInt(req.query.total)).toArray();
-    res.send({
-      success: true,
-      data: services,
-    });
+    if (req.query.total) {
+      const services = await cursor.limit(parseInt(req.query.total)).toArray();
+      res.send({
+        success: true,
+        data: services,
+      });
+    } else {
+      const services = await cursor.toArray();
+      res.send({
+        success: true,
+        data: services,
+      });
+    };
   } catch (error) {
     console.log(error.name, error.message);
     res.send({
