@@ -136,16 +136,16 @@ app.post('/add-review/:slug', async (req, res) => {
   try {
     const review = req.body;
     const result = await Reviews.insertOne(review);
-    const service = await Services.findOne({_id: review.serviceId});
+    const service = await Services.findOne({_id: ObjectId(review.serviceId)});
     if (!service.rating) {
       service['starCount'] = 0;
       service['reviewCount'] = 0;
     };
     service['starCount'] = service.starCount + review.star;
     service['reviewCount'] = service.reviewCount + 1;
-    service['rating'] = service.starCount / service.reviewCount;
+    service['rating'] = parseInt(service.starCount / service.reviewCount);
 
-    const ratingResult = await Services.updateOne({_id: review.serviceId}, {$set: service});
+    const ratingResult = await Services.updateOne({_id: ObjectId(review.serviceId)}, {$set: service});
 
     if (result.insertedId && ratingResult.modifiedCount) {
       res.send({
@@ -248,7 +248,7 @@ app.get('/services', async (req, res) => {
 app.get('/service/:slug', async (req, res) => {
   try {
     const service = await Services.findOne({ slug: req.params.slug});
-    const cursor = Reviews.find({serviceId: service._id}).sort({'_id': -1});
+    const cursor = Reviews.find({slug: service.slug}).sort({'_id': -1});
     const reviews = await cursor.toArray();
     res.send({
       success: true,
@@ -267,10 +267,10 @@ app.get('/service/:slug', async (req, res) => {
 app.patch('/my-reviews/edit/:id', async (req, res) => {
   const {comment, oldStar, star} = req.body;
   try {
-    const service = await Services.findOne({_id: req.params.id});
+    const service = await Services.findOne({_id: ObjectId(req.params.id)});
     service['starCount'] = (service.starCount - oldStar) + star;
     service['rating'] = parseInt(service.starCount / service.reviewCount);
-    const serviceResult = await Services.updateOne({_id: req.params.id}, { $set: service});
+    const serviceResult = await Services.updateOne({_id: ObjectId(req.params.id)}, { $set: service});
     const reviewResult = await Reviews.updateOne({serviceId: req.params.id}, {$set: {comment, star}});
     if (serviceResult.modifiedCount || reviewResult.modifiedCount) {
       res.send({
@@ -302,11 +302,11 @@ app.delete('/my-reviews/delete/:id', async (req, res) => {
       });
       return;
     };
-    const service = await Services.findOne({_id: req.params.id});
+    const service = await Services.findOne({_id: ObjectId(req.params.id)});
     service['starCount'] = (service.starCount - req.body.oldStar);
     service['reviewCount'] = service.reviewCount - 1;
     service['rating'] = parseInt(service.starCount === 0 ? 0 : service.starCount / service.reviewCount);
-    const serviceResult = await Services.updateOne({_id: req.params.id}, { $set: service});
+    const serviceResult = await Services.updateOne({_id: ObjectId(req.params.id)}, { $set: service});
     const reviewResult = await Reviews.deleteOne({serviceId: req.params.id});
     if (serviceResult.modifiedCount && reviewResult.deletedCount) {
       res.send({
