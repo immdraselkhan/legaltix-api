@@ -8,6 +8,9 @@ Hosted on Vercel
 ## Live Website - [legaltix.web.app](https://legaltix.web.app)
 Hosted on Google firebase
 
+## Live Site Code - [Github](https://github.com/immdraselkhan/legaltix)
+Hosted on Github
+
 ## Other Resources
 I used the following things in this server.
 
